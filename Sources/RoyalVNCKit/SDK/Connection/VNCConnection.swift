@@ -27,6 +27,9 @@ public final class VNCConnection: NSObjectOrAnyObject {
 #endif
 	public weak var delegate: VNCConnectionDelegate?
 
+    /// Receives remote text without reading or writing the system pasteboard.
+    public weak var clipboardDelegate: VNCClipboardDelegate?
+
 #if canImport(ObjectiveC)
 	@objc
 #endif

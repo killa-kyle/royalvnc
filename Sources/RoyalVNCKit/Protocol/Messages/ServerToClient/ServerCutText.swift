@@ -27,6 +27,10 @@ extension VNCProtocol.ServerCutText {
 		let length = try await receiveLength(connection: connection,
 											 logger: logger)
 
+		guard length != Int(Int32.min), abs(length) <= 1_048_576 else {
+            throw VNCError.protocol(.invalidData)
+        }
+
 		if length >= 0 { // Standard Message
 			let text = try await connection.readString(encoding: Self.stringEncoding,
 													   length: .init(length))
@@ -35,15 +39,12 @@ extension VNCProtocol.ServerCutText {
 						 text: text,
 						 extended: nil)
 		} else { // Extended Message
-			let extendedLength = Int32(abs(length))
-
-			let extended = try await ExtendedServerCutText.receive(connection: connection,
-																   logger: logger,
-																   length: extendedLength)
-
-			return .init(messageType: Self.messageType,
-						 text: "",
-						 extended: extended)
+            // No extended-clipboard pseudo-encoding is advertised. If a server
+            // nevertheless sends one, consume its complete bounded payload so
+            // unsupported rich data cannot desynchronize subsequent messages.
+            _ = try await connection.read(length: abs(length))
+            return .init(messageType: Self.messageType, text: "",
+                         extended: .init(serverCapabilities: nil))
 		}
     }
 }

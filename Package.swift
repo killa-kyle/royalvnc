@@ -80,6 +80,8 @@ let package = Package(
             ]
         ),
 
+        .testTarget(name: "ManualClipboardTests", dependencies: ["RoyalVNCKit"]),
+
         d3desTarget,
         zTarget,
 
