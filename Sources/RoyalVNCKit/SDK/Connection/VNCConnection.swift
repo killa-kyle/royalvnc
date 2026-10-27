@@ -29,6 +29,7 @@ public final class VNCConnection: NSObjectOrAnyObject {
 
     /// Receives remote text without reading or writing the system pasteboard.
     public weak var clipboardDelegate: VNCClipboardDelegate?
+    let extendedClipboardState = ExtendedClipboardState()
 
 #if canImport(ObjectiveC)
 	@objc
@@ -173,7 +174,7 @@ public final class VNCConnection: NSObjectOrAnyObject {
 			VNCPseudoEncodingType.desktopName.rawValue,
 			VNCPseudoEncodingType.cursor.rawValue,
 			// TODO: Implement
-//			VNCPseudoEncodingType.extendedClipboard.rawValue,
+			VNCPseudoEncodingType.extendedClipboard.rawValue,
             
             // TODO: Make configurable
 			VNCPseudoEncodingType.compressionLevel6.rawValue
@@ -291,6 +292,7 @@ extension VNCConnection {
 	func beginDisconnecting(error: Error? = nil) {
 		guard !state.disconnectRequested else { return }
 
+		extendedClipboardState.reset()
 		state.disconnectRequested = true
 		updateConnectionState(.disconnecting)
 

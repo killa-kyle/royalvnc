@@ -80,7 +80,7 @@ let package = Package(
             ]
         ),
 
-        .testTarget(name: "ManualClipboardTests", dependencies: ["RoyalVNCKit"]),
+        .testTarget(name: "ManualClipboardTests", dependencies: ["RoyalVNCKit"], resources: [.copy("extended_fixture.py")]),
 
         d3desTarget,
         zTarget,

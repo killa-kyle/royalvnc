@@ -17,14 +17,25 @@ public enum VNCClipboardError: Error {
 }
 
 public extension VNCConnection {
-    /// Standard RFB clipboard text is ISO-8859-1. Reject unsupported text rather
-    /// than silently replacing it with an empty clipboard. This manual API works
+    /// Standard servers use ISO-8859-1; servers negotiating Extended Clipboard
+    /// use UTF-8 text. Reject unsupported text rather than sending empty data.
+    /// This manual API works
     /// with automatic redirection disabled; callers own consent/observe policy.
     func sendClipboardText(_ text: String) throws {
         guard connectionState.status == .connected else { throw VNCClipboardError.notConnected }
-        try Self.validateClipboardText(text)
-        enqueueClientCutTextMessage(text)
+        if let packet = try extendedClipboardState.send(text) {
+            enqueueClientToServerMessage(ExtendedClipboardMessage(payload: try packet.payload()))
+        } else {
+            try Self.validateClipboardText(text)
+            enqueueClientCutTextMessage(text)
+        }
     }
+
+    /// Revoke previously supplied data before entering observe/background modes.
+    /// A later server request will no longer receive that cached clipboard.
+    func clearLocalClipboardText() { extendedClipboardState.clearLocal() }
+
+    var supportsUTF8Clipboard: Bool { extendedClipboardState.supportsUTF8 }
 
     static func validateClipboardText(_ text: String) throws {
         guard let data = text.data(using: .isoLatin1, allowLossyConversion: false) else {

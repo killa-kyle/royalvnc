@@ -103,17 +103,21 @@ private extension VNCConnection {
 		let serverCutText = try await VNCProtocol.ServerCutText.receive(connection: connection,
 																		logger: logger)
 
-		let text = serverCutText.text
-
-		logger.logDebug("Received Clipboard Text from Server")
-
-		if serverCutText.extended == nil {
-            clipboardDelegate?.connection(self, didReceiveClipboardText: text)
+        let text: String
+        if let extended = serverCutText.extended {
+            let result = try extendedClipboardState.receive(extended)
+            for packet in result.responses {
+                enqueueClientToServerMessage(ExtendedClipboardMessage(payload: try packet.payload()))
+            }
+            guard let received = result.text else { return }
+            text = received
+        } else {
+            extendedClipboardState.clearLocal()
+            text = serverCutText.text
         }
-
+        clipboardDelegate?.connection(self, didReceiveClipboardText: text)
         guard settings.isClipboardRedirectionEnabled else { return }
-
-		clipboard.text = text
+        clipboard.text = text
 	}
 
 	func handleBellMessage() async throws {

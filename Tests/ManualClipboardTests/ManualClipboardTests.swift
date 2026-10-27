@@ -19,8 +19,8 @@ final class ManualClipboardTests: XCTestCase {
         XCTAssertEqual(received.text, "Café")
         XCTAssertTrue(reader.remaining.isEmpty)
     }
-    func testUnadvertisedExtendedPayloadIsConsumedWithoutText() async throws {
-        let reader = Reader(Data([0, 0, 0, 255, 255, 255, 252, 1, 2, 3, 4]))
+    func testExtendedNotificationIsParsedWithoutText() async throws {
+        let reader = Reader(Data([0, 0, 0, 255, 255, 255, 252, 8, 0, 0, 1]))
         let received = try await VNCProtocol.ServerCutText.receive(connection: reader, logger: VNCPrintLogger())
         XCTAssertNotNil(received.extended)
         XCTAssertTrue(reader.remaining.isEmpty)

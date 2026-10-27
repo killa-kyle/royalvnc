@@ -10,12 +10,30 @@ system pasteboard. Keep `isClipboardRedirectionEnabled` false when using manual
 integration. Callbacks arrive on the receive task; dispatch UI work appropriately.
 The app remains responsible for observe mode, lifecycle, consent, and echo suppression.
 
-Standard RFB text is ISO-8859-1; unsupported characters and text over 1 MiB throw
-instead of silently sending an empty clipboard. A disconnected send also throws.
-Incoming clipboard data is bounded to 1 MiB. Extended clipboard is not advertised;
-unsolicited extended payloads are consumed fully and produce no text callback.
-Rich text, image transfers, ARD proprietary clipboard, and UTF-8 extended clipboard
-are not implemented by this patch.
+Standard-only servers retain ISO-8859-1 behavior: Unicode is rejected before
+negotiation. The client advertises Extended Clipboard and activates UTF-8 only
+after receiving server CAPS. CAPS sizes, NOTIFY, REQUEST, PEEK and zlib-compressed
+PROVIDE text follow the public RFB specification. Text terminates with NUL and
+uses CRLF on the wire; callbacks normalize to LF. Only plain text is advertised.
 
-Validation: `swift test --build-system native` passes five focused wire/parser
-tests on macOS. Full KyleVNC app wire tests and Duo acceptance belong to the caller.
+Incoming compressed payload, aggregate format bytes, and outgoing text are bounded
+to 1 MiB. Inflation uses a fixed destination with room for at most 16 format length
+fields, rejects oversized output, malformed UTF-8, missing terminators, truncated
+payloads, trailing data, and concatenated zlib streams. No unbounded inflation occurs.
+Unsupported formats are parsed under the same bound but never published as text.
+
+`clearLocalClipboardText()` revokes cached explicitly supplied clipboard content:
+call it on observe mode, background, or sharing revocation so later server REQUEST
+messages cannot retrieve old local data. Disconnect resets all extension state.
+The fork does not implement rich text, image transfers, or ARD proprietary clipboard.
+
+Validation: `swift test --build-system native` passes 11 tests, including a real
+loopback Unicode RFB CAPS/NOTIFY/REQUEST/PROVIDE exchange, codec/action tests, standard
+Latin1 framing, malformed/truncated data, and bounded inflation-bomb rejection.
+Full KyleVNC app/Duo acceptance belongs to the caller.
+
+Protocol sources (consulted as behavioral documentation; no TigerVNC implementation
+code copied):
+- https://github.com/rfbproto/rfbproto/blob/master/rfbproto.rst (Extended Clipboard)
+- https://github.com/TigerVNC/tigervnc/blob/master/common/rfb/CConnection.cxx
+- https://github.com/TigerVNC/tigervnc/blob/master/common/rfb/CMsgWriter.cxx
